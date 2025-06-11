@@ -3,12 +3,8 @@ package bcc.javaJostle;
 import java.util.ArrayList;
 
 public class MyRobot extends Robot{
-    private static final int STEP_SIZE = 2;
-    private boolean isInSight;
-    private boolean hasMoved;
-
     public MyRobot(int x, int y){
-        super(x, y, 3, 1, 3, 3,"Robob", "myRobotImage.png", "defaultProjectileImage.png");
+        super(x, y, 5, 1, 1, 3,"Robob", "myRobotImage.png", "defaultProjectileImage.png");
         // Health: 4, Speed: 2, Attack Speed: 3, Projectile Strength: 1
         // Total = 10
         // Image name is "myRobotImage.png"
@@ -28,41 +24,28 @@ public class MyRobot extends Robot{
         only shoot when canAttack() is true!        
         */
         System.out.println("Thinking...");
-        Robot targetRobot = nearestRobot(robots);
+        Robot targetRobot = targetRobot(robots);
         if (targetRobot != null) {
-            isInSight = checkInSight(targetRobot, map);
-            if (!isInSight) {
-                // if the robot isn't in sight, move towards it
-                move(targetRobot, map);
-
-                // re-evaluate if the robot is in sight
-                isInSight = checkInSight(targetRobot, map);
+            move(targetRobot, map);
+            if(canAttack())
+            {
+                shootAtRobot(targetRobot);
             }
-            if (isInSight && canAttack()) {
-                // if the robot is in sight and can attack, shoot at it
-                shootAtLocation(targetRobot.getX(), targetRobot.getY());
-            }
-        }    
+        }
     }
 
-    //
-    // helper methods!!
-    // EXTREMELY IMPORTANT
-    //
-
-    
     // return the nearest robot
-    private Robot nearestRobot(ArrayList<Robot> robots) {
-        Robot nearestRobot = null;
+    private Robot targetRobot(ArrayList<Robot> robots) {
+        Robot targetRobot = null;
         double minDist = Double.MAX_VALUE;
         for (Robot robot : robots) {
             double dist = Math.hypot((getX() + Utilities.ROBOT_SIZE / 2) - (robot.getX() + Utilities.ROBOT_SIZE / 2), (getY() + Utilities.ROBOT_SIZE / 2) - (robot.getY() + Utilities.ROBOT_SIZE / 2));
             if (dist < minDist && robot != this) {
                 minDist = dist; 
-                nearestRobot = robot;
+                targetRobot = robot;
             }
         }
-        return nearestRobot;
+        return targetRobot;
     }
 
     // movement method, kept here to keep the code organized
@@ -75,53 +58,60 @@ public class MyRobot extends Robot{
         double x2 = targetRobot.getX() + Utilities.ROBOT_SIZE / 2;
         double y2 = targetRobot.getY() + Utilities.ROBOT_SIZE / 2;
 
-        if (x1 < x2) {
-            xMovement = 1;
-        } else if (x1 > x2) {
-            xMovement = -1;
-        } else if (y1 < y2) {
-            yMovement = 1;
-        } else if (y1 > y2) {
-            yMovement = -1;
+        double dx = Math.abs(x2 - x1);
+        double dy = Math.abs(y2 - y1);
+
+        int tileX = (int) (x1 / Utilities.TILE_SIZE);
+        int tileY = (int) (y1 / Utilities.TILE_SIZE);
+
+        int[][] tiles = map.getTiles();
+
+        if (dx >= dy) {
+            if (x1 < x2) {
+                if (tiles[tileY][tileX + 1] != Utilities.WALL) {
+                    xMovement = 1;
+                } else if (tiles[tileY - 1][tileX] != Utilities.WALL) {
+                    yMovement = -1;
+                } else {
+                    yMovement = 1;
+                }
+            } else {
+                if (tiles[tileY][tileX - 1] != Utilities.WALL) {
+                    xMovement = -1;
+                } else if (tiles[tileY - 1][tileX] != Utilities.WALL) {
+                    yMovement = -1;
+                } else {
+                    yMovement = 1;
+                }
+            }
+        } else {
+            if (y1 < y2) {
+                if (tiles[tileY + 1][tileX] != Utilities.WALL) {
+                    yMovement = 1;
+                } else if (tiles[tileY][tileX + 1] != Utilities.WALL) {
+                    xMovement = 1;
+                } else {
+                    xMovement = -1;
+                }
+            } else {
+                if (tiles[tileY - 1][tileX] != Utilities.WALL) {
+                    yMovement = -1;
+                } else if (tiles[tileY][tileX + 1] != Utilities.WALL) {
+                    xMovement = 1;
+                } else {
+                    xMovement = -1;
+                }
+            }
         }
     }
 
-    // check if the target robot is in sight
-    // being in sight is defined as there being no obstacles between the robot and the target robot
-    private boolean checkInSight(Robot targetRobot, Map map) {
-        double x1 = getX() + Utilities.ROBOT_SIZE / 2;
-        double y1 = getY() + Utilities.ROBOT_SIZE / 2;
-        double x2 = targetRobot.getX() + Utilities.ROBOT_SIZE / 2;
-        double y2 = targetRobot.getY() + Utilities.ROBOT_SIZE / 2;
-
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        double distance = Math.hypot(dx, dy);
-        int steps = (int) (distance / STEP_SIZE);
-
-        double xStep = dx / steps;
-        double yStep = dy / steps;
-
-        for (int i = 0; i <= steps; i++) {
-            int tileX = coordToTile(x1);
-            int tileY = coordToTile(y1);
-            
-            // bounds check (necessary)
-            if (tileX < 0 || tileX >= map.getTiles().length || tileY < 0 || tileY >= map.getTiles()[0].length) {
-                return false;
-            }
-
-            if (map.getTiles()[tileX][tileY] == Utilities.WALL) {
-                return false;
-            }
-
-            x1 += xStep;
-            y1 += yStep;
-        }
-        return true;
-    }
-
-    private int coordToTile(double coordinate) {
-        return (int) (coordinate / Utilities.TILE_SIZE);
+    // attack with a spray style
+    private void shootAtRobot(Robot targetRobot) {
+        int distanceX = getX() - targetRobot.getX();
+        int distanceY = getY() - targetRobot.getY();
+        double angle = Math.atan2(distanceY, distanceX);
+        double offset = (Math.random() * 15) - 7.5;
+        double distance = Math.hypot(getX() - targetRobot.getX(), getY() - targetRobot.getY());
+        shootAtLocation(getX() + Utilities.ROBOT_SIZE / 2 - (int) (Math.cos(angle + (Math.PI /180 * offset)) * distance), getY() + Utilities.ROBOT_SIZE / 2 - (int) (Math.sin(angle + (Math.PI / 180 * offset)) * distance)); 
     }
 }
