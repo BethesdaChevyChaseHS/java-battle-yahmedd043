@@ -35,7 +35,7 @@ public class MyRobot extends Robot{
         }
     }
 
-    // return the nearest robot
+    // searches the array of robots and returns the closest robot
     private Robot targetRobot(ArrayList<Robot> robots) {
         Robot targetRobot = null;
         double minDist = Double.MAX_VALUE;
@@ -49,7 +49,7 @@ public class MyRobot extends Robot{
         return targetRobot;
     }
 
-    // movement method, kept here to keep the code organized
+    // simple smart movement, ignores walls and mud
     private void move(Robot targetRobot, Map map) {
         xMovement = 0;
         yMovement = 0;
@@ -62,30 +62,30 @@ public class MyRobot extends Robot{
         double dx = Math.abs(x2 - x1);
         double dy = Math.abs(y2 - y1);
 
+        int[][] tiles = map.getTiles();
         int tileLeft = getOccupiedTiles()[0];
         int tileRight = getOccupiedTiles()[1];
         int tileTop = getOccupiedTiles()[2];
         int tileBottom = getOccupiedTiles()[3];
 
-        int[][] tiles = map.getTiles();
         if (dx >= dy) {
             if (x1 < x2) { // move right
                 if (tiles[tileTop][tileRight + 1] != Utilities.WALL && tiles[tileBottom][tileRight + 1] != Utilities.WALL &&
                     tiles[tileTop][tileRight + 1] != Utilities.MUD && tiles[tileBottom][tileRight + 1] != Utilities.MUD) {
                     xMovement = 1;
                 } else if (tiles[tileTop - 1][tileLeft] != Utilities.WALL && tiles[tileLeft][tileTop - 1] != Utilities.MUD) {
-                    yMovement = -1;
+                    yMovement = -1; // if right is blocked, try moving up
                 } else if (tiles[tileBottom + 1][tileLeft] != Utilities.WALL && tiles[tileLeft][tileBottom + 1] != Utilities.MUD) {
-                    yMovement = 1;
+                    yMovement = 1; // if both right and up are blocked, try moving down
                 }
             } else { // move left
                 if (tiles[tileTop][tileLeft - 1] != Utilities.WALL && tiles[tileBottom][tileLeft - 1] != Utilities.WALL &&
                     tiles[tileTop][tileLeft - 1] != Utilities.MUD && tiles[tileBottom][tileLeft - 1] != Utilities.MUD) {
                     xMovement = -1;
                 } else if (tiles[tileTop - 1][tileLeft] != Utilities.WALL && tiles[tileLeft][tileTop - 1] != Utilities.MUD) {
-                    yMovement = -1;
+                    yMovement = -1; // if left is blocked, try moving up
                 } else if (tiles[tileBottom + 1][tileLeft] != Utilities.WALL && tiles[tileLeft][tileBottom + 1] != Utilities.MUD) {
-                    yMovement = 1;
+                    yMovement = 1; // if both left and up are blocked, try moving down
                 }
             }
         } else {
@@ -94,23 +94,24 @@ public class MyRobot extends Robot{
                     tiles[tileBottom + 1][tileLeft] != Utilities.MUD && tiles[tileBottom + 1][tileRight] != Utilities.MUD) {
                     yMovement = 1;
                 } else if (tiles[tileTop][tileRight + 1] != Utilities.WALL && tiles[tileTop][tileRight + 1] != Utilities.MUD) {
-                    xMovement = 1;
+                    xMovement = 1; // if down is blocked, try moving right
                 } else if (tiles[tileTop][tileLeft - 1] != Utilities.WALL && tiles[tileTop][tileLeft - 1] != Utilities.MUD) {
-                    xMovement = -1;
+                    xMovement = -1; // if both down and right are blocked, try moving left
                 }
             } else { // move up
                 if (tiles[tileTop - 1][tileLeft] != Utilities.WALL && tiles[tileTop - 1][tileRight] != Utilities.WALL &&
                     tiles[tileTop - 1][tileLeft] != Utilities.MUD && tiles[tileTop - 1][tileRight] != Utilities.MUD) {
                     yMovement = -1;
                 } else if (tiles[tileTop][tileRight + 1] != Utilities.WALL && tiles[tileTop][tileRight + 1] != Utilities.MUD) {
-                    xMovement = 1;
+                    xMovement = 1; // if up is blocked, try moving right
                 } else if (tiles[tileTop][tileLeft - 1] != Utilities.WALL && tiles[tileTop][tileLeft - 1] != Utilities.MUD) {
-                    xMovement = -1;
+                    xMovement = -1; // if both up and right are blocked, try moving left
                 }
             }
         }
     }
 
+     // returns [left, right, top, bottom] tile indices
     private int[] getOccupiedTiles() {
         int left = getX();
         int right = getX() + Utilities.ROBOT_SIZE - 1;
@@ -122,11 +123,10 @@ public class MyRobot extends Robot{
         int tileTop = top / Utilities.TILE_SIZE;
         int tileBottom = bottom / Utilities.TILE_SIZE;
 
-        // returns [left, right, top, bottom] tile indices
         return new int[] { tileLeft, tileRight, tileTop, tileBottom };
     }
 
-    // attack with a spray style
+    // attacks towards the target robot at an angle ranging from -7.5 to 7.5 degrees
     private void sprayShoot(Robot targetRobot) {
         int distanceX = (getX() + Utilities.ROBOT_SIZE / 2) - (targetRobot.getX() + Utilities.ROBOT_SIZE / 2);
         int distanceY = (getY() + Utilities.ROBOT_SIZE / 2) - (targetRobot.getY() + Utilities.ROBOT_SIZE / 2);
